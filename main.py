@@ -23,9 +23,8 @@ class Renderer(Widget):
     def __init__(self, **kwargs):
         self.canvas = RenderContext(compute_normal_mat=True)
         self.canvas.shader.source = resource_find('simple.glsl')
-        self.scene = ObjFile(resource_find("monkey.obj"))
-        #self.scene = ObjFile(resource_find("razoom2.obj"))
-        #self.scene = ObjFile(resource_find("222.obj"))
+        self.scene = ObjFile(resource_find("razoomnurbs.obj"))
+        self.scene2 = ObjFile(resource_find("monkey.obj"))
         super(Renderer, self).__init__(**kwargs)
         with self.canvas:
             self.cb = Callback(self.setup_gl_context)
@@ -47,13 +46,10 @@ class Renderer(Widget):
         asp = self.width / float(self.height)
         proj = Matrix().view_clip(-asp, asp, -1, 1, 1, 100, 1)
         self.canvas['projection_mat'] = proj
-        self.canvas['diffuse_light'] = (1.0, 1.0, 1.)
-        self.canvas['ambient_light'] = (1.0, 1.0, 1.)
-        
-        Clock.schedule_once(self.update_glsl, 1 / 60.)
 
     def setup_scene(self):
         Color(1, 1, 1, 1)
+
         PushMatrix()
         Translate(0, 0, -3)
         self.rotx = Rotate(0, 1, 0, 0)
@@ -61,10 +57,31 @@ class Renderer(Widget):
         self.scale = Scale(1)
         m = self.scene.objects.values()[0]
         UpdateNormalMatrix()
+        SetState(
+                Kd=[0.9529, 0.0000, 0.0000],
+                Ka=[0.9529, 0.0000, 0.0000],
+                Ks=[0.3500, 0.3500, 0.3500],
+                Ns=32.0,
+                Tr=1.0
+            )
         self.mesh = Mesh(
             vertices=m.vertices,
             indices=m.indices,
             fmt=m.vertex_format,
+            mode='triangles',
+        )
+        m2 = self.scene2.objects.values()[0]
+        self.test_mat = SetState(
+                Kd=[0.4235, 0.0314, 0.5333],
+                Ka=[0.4235, 0.0314, 0.5333],
+                Ks=[0.3500, 0.3500, 0.3500],
+                Ns=16.0,
+                Tr=1.0
+            )
+        Mesh(
+            vertices=m2.vertices,
+            indices=m2.indices,
+            fmt=m2.vertex_format,
             mode='triangles',
         )
         PopMatrix()
@@ -75,16 +92,21 @@ class Renderer(Widget):
         return x_angle, y_angle
     
     def on_touch_down(self, touch):
+        self.update_glsl()
+        self.test_mat['Tr'] -= 0.1
+        if self.test_mat['Tr'] < 0:
+            self.test_mat['Tr'] = 1
         touch.grab(self)
         self._touches.append(touch)
         
-    def on_touch_up(self, touch):
+    def on_touch_up(self, touch): 
         touch.ungrab(self)
         self._touches.remove(touch)
         
     
     def on_touch_move(self, touch): 
         #Logger.debug("dx: %s, dy: %s. Widget: (%s, %s)" % (touch.dx, touch.dy, self.width, self.height))
+
         self.update_glsl()
         if touch in self._touches and touch.grab_current == self:
             if len(self._touches) == 1:
