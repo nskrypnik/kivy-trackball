@@ -11,6 +11,7 @@ from kivy.graphics import *
 from objloader import ObjFile
 from kivy.logger import Logger
 from kivy.vector import Vector
+from kivy.core.image import Image
 
 """
 Vector v = new Vector(drawRotateX, drawRotateY, 0);
@@ -23,9 +24,7 @@ class Renderer(Widget):
     def __init__(self, **kwargs):
         self.canvas = RenderContext(compute_normal_mat=True)
         self.canvas.shader.source = resource_find('simple.glsl')
-        self.scene = ObjFile(resource_find("monkey.obj"))
-        #self.scene = ObjFile(resource_find("razoom2.obj"))
-        #self.scene = ObjFile(resource_find("222.obj"))
+        self.scene = ObjFile(resource_find("standardmolen.obj"))
         super(Renderer, self).__init__(**kwargs)
         with self.canvas:
             self.cb = Callback(self.setup_gl_context)
@@ -53,12 +52,13 @@ class Renderer(Widget):
         Clock.schedule_once(self.update_glsl, 1 / 60.)
 
     def setup_scene(self):
+        texture = Image('standardmolen.png').texture
         Color(1, 1, 1, 1)
         PushMatrix()
-        Translate(0, 0, -3)
+        Translate(0, -2, -5)
         self.rotx = Rotate(0, 1, 0, 0)
         self.roty = Rotate(0, 0, 1, 0)
-        self.scale = Scale(1)
+        self.scale = Scale(0.6)
         m = self.scene.objects.values()[0]
         UpdateNormalMatrix()
         self.mesh = Mesh(
@@ -66,6 +66,7 @@ class Renderer(Widget):
             indices=m.indices,
             fmt=m.vertex_format,
             mode='triangles',
+            texture=texture,
         )
         PopMatrix()
         

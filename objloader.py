@@ -61,7 +61,7 @@ class ObjFile:
                 #get vertex components
                 v = self.vertices[verts[i]-1]
 
-                data = [v[0], v[1], v[2], n[0], n[1], n[2], t[0], t[1]]
+                data = [v[0], v[1], v[2], n[0], n[1], n[2], t[0], 1 - t[1]]
                 mesh.vertices.extend(data)
 
             tri = [idx, idx+1, idx+2]
