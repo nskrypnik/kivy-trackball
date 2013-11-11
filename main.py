@@ -13,18 +13,12 @@ from kivy.logger import Logger
 from kivy.vector import Vector
 from kivy.core.image import Image
 
-"""
-Vector v = new Vector(drawRotateX, drawRotateY, 0);
-float length = v.length();
-v.normalize();
-glRotatef(length, v.x, v.y, v.z);
-"""
 
 class Renderer(Widget):
     def __init__(self, **kwargs):
         self.canvas = RenderContext(compute_normal_mat=True)
         self.canvas.shader.source = resource_find('simple.glsl')
-        self.scene = ObjFile(resource_find("standardmolen.obj"))
+        self.scene = ObjFile(resource_find("orion.obj"))
         super(Renderer, self).__init__(**kwargs)
         with self.canvas:
             self.cb = Callback(self.setup_gl_context)
@@ -32,7 +26,10 @@ class Renderer(Widget):
             self.setup_scene()
             PopMatrix()
             self.cb = Callback(self.reset_gl_context)
-        Clock.schedule_once(self.update_glsl, 1 / 60.)
+        self.camera_translate = [0, 0, -0.67]
+        self.camera_ax = 0
+        self.camera_ay = 0
+        Clock.schedule_once(self.update_glsl, 1 / 60.)    
         
         self._touches = []
 
@@ -44,21 +41,23 @@ class Renderer(Widget):
 
     def update_glsl(self, *largs):
         asp = self.width / float(self.height)
-        proj = Matrix().view_clip(-asp, asp, -1, 1, 1, 100, 1)
-        self.canvas['projection_mat'] = proj
-        self.canvas['diffuse_light'] = (1.0, 1.0, 1.)
-        self.canvas['ambient_light'] = (1.0, 1.0, 1.)
+        asp = asp*0.3
+        proj = Matrix()
+        mat = Matrix()
+        mat = mat.look_at(0, 0, self.camera_translate[2], 0, 0, -3, 0, 1, 0)
+        proj = proj.view_clip(-asp, asp, -.3, .3, 1, 100, 1)
         
-        Clock.schedule_once(self.update_glsl, 1 / 60.)
+        self.canvas['projection_mat'] = proj
+        self.canvas['modelview_mat'] = mat
 
     def setup_scene(self):
-        texture = Image('standardmolen.png').texture
+        texture = Image('orion.png').texture
         Color(1, 1, 1, 1)
         PushMatrix()
-        Translate(0, -2, -5)
-        self.rotx = Rotate(0, 1, 0, 0)
-        self.roty = Rotate(0, 0, 1, 0)
-        self.scale = Scale(0.6)
+        Translate(0, 0, -4)
+        self.rotx = Rotate(0, 0, 1, 0)
+        self.roty = Rotate(0, 1, 0, 0)
+        #self.scale = Scale(0.6)
         m = self.scene.objects.values()[0]
         UpdateNormalMatrix()
         self.mesh = Mesh(
@@ -86,14 +85,18 @@ class Renderer(Widget):
     
     def on_touch_move(self, touch): 
         #Logger.debug("dx: %s, dy: %s. Widget: (%s, %s)" % (touch.dx, touch.dy, self.width, self.height))
-        self.update_glsl()
+        #self.update_glsl()
         if touch in self._touches and touch.grab_current == self:
             if len(self._touches) == 1:
                 # here do just rotation        
                 ax, ay = self.define_rotate_angle(touch)
                 
-                self.roty.angle += ax
-                self.rotx.angle += ay
+                
+                self.rotx.angle += ax
+                self.roty.angle += ay
+                
+                #ax, ay = math.radians(ax), math.radians(ay)
+                
 
             elif len(self._touches) == 2: # scaling here
                 #use two touches to determine do we need scal
@@ -116,21 +119,19 @@ class Renderer(Widget):
                 SCALE_FACTOR = 0.01
                 
                 if new_distance > old_distance: 
-                    scale = SCALE_FACTOR
+                    scale = -1*SCALE_FACTOR
                     Logger.debug('Scale up')
                 elif new_distance == old_distance:
                     scale = 0
                 else:
-                    scale = -1*SCALE_FACTOR
+                    scale = SCALE_FACTOR
                     Logger.debug('Scale down')
-                    
-                xyz = self.scale.xyz
                 
                 if scale:
-                    self.scale.xyz = tuple(p + scale for p in xyz)
-        
-        
-        
+                    self.camera_translate[2] += scale
+                    print scale, self.camera_translate
+            self.update_glsl()
+
 
 class RendererApp(App):
     def build(self):
